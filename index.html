@@ -144,7 +144,27 @@
       cursor: pointer;
     }
 
+    .stream-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: none;
+      background: #000;
+    }
+
+    .player-screen.live-active .stream-video {
+      display: block;
+    }
+
+    .player-screen.live-active .timer-overlay {
+      display: none;
+    }
+
     .timer-overlay {
+      position: relative;
+      z-index: 2;
       background: rgba(20, 22, 28, 0.35);
       backdrop-filter: blur(1.2px);
       border: 1px solid rgba(255, 255, 255, 0.25);
@@ -542,9 +562,10 @@
 
     <div class="player-wrapper">
       <div class="player-screen" id="playerScreen" title="Нажмите для проверки трансляции">
+        <video class="stream-video" id="streamVideo" loop playsinline muted preload="metadata"></video>
         <div class="timer-overlay">
           <div class="status">ТРАНСЛЯЦИЯ ЕЩЕ НЕ НАЧАЛАСЬ</div>
-          <div class="digits" id="countdown">00:41:03:15</div>
+          <div class="digits" id="countdown">00:01:17:43</div>
         </div>
       </div>
 
@@ -555,9 +576,10 @@
         <div class="controls-row">
           <div class="controls-left">
             <button class="control-btn" id="playBtn">▶</button>
-            <span style="font-size:12px; font-weight:700;"><span class="live-dot"></span>ОЖИДАНИЕ СИГНАЛА</span>
+            <span style="font-size:12px; font-weight:700;" id="signalLabel"><span class="live-dot"></span>ОЖИДАНИЕ СИГНАЛА</span>
           </div>
           <div class="controls-right">
+            <button class="control-btn" id="muteBtn" title="Звук вкл/выкл">🔇</button>
             <button class="control-btn" title="Настройки">⚙</button>
             <button class="control-btn" id="fullBtn" title="На весь экран">⛶</button>
           </div>
@@ -641,24 +663,95 @@
   </footer>
 
   <script>
-    let totalSeconds = 41 * 3600 + 3 * 60 + 15;
+    /* ТАЙМЕР СТАРТУЕТ С 01:17:43 */
+    let totalSeconds = 1 * 3600 + 17 * 60 + 43;
     const countdownEl = document.getElementById('countdown');
+    const screen = document.getElementById('playerScreen');
+    const streamVideo = document.getElementById('streamVideo');
+    const signalLabel = document.getElementById('signalLabel');
+    const playBtn = document.getElementById('playBtn');
+    const muteBtn = document.getElementById('muteBtn');
+    const fullBtn = document.getElementById('fullBtn');
 
-    setInterval(() => {
-      if (totalSeconds > 0) {
+    let streamStarted = false;
+
+    function formatCountdown(sec) {
+      const days = Math.floor(sec / 86400);
+      const hours = Math.floor((sec % 86400) / 3600);
+      const minutes = Math.floor((sec % 3600) / 60);
+      const seconds = sec % 60;
+
+      return (
+        String(days).padStart(2, '0') + ':' +
+        String(hours).padStart(2, '0') + ':' +
+        String(minutes).padStart(2, '0') + ':' +
+        String(seconds).padStart(2, '0')
+      );
+    }
+
+    countdownEl.textContent = formatCountdown(totalSeconds);
+
+    function getKhabarovskVideoSrc() {
+      const khabarovskHour = new Date(Date.now() + 10 * 3600 * 1000).getUTCHours();
+      return (khabarovskHour >= 7 && khabarovskHour < 21) ? 'stream-day.mp4' : 'stream-night.mp4';
+    }
+
+    function startLiveStream() {
+      if (streamStarted) return;
+      streamStarted = true;
+      totalSeconds = 0;
+      countdownEl.textContent = formatCountdown(0);
+
+      streamVideo.src = getKhabarovskVideoSrc();
+      screen.classList.add('live-active');
+      signalLabel.innerHTML = '<span class="live-dot"></span>ПРЯМОЙ ЭФИР • КАМЕРА 1';
+      playBtn.textContent = '❚❚';
+
+      streamVideo.play().catch(() => {});
+    }
+
+    const timerInterval = setInterval(() => {
+      if (streamStarted) {
+        clearInterval(timerInterval);
+        return;
+      }
+      if (totalSeconds > 1) {
         totalSeconds--;
-        const days = Math.floor(totalSeconds / 86400);
-        const hours = Math.floor((totalSeconds % 86400) / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-
-        countdownEl.textContent = 
-          String(days).padStart(2, '0') + ':' +
-          String(hours).padStart(2, '0') + ':' +
-          String(minutes).padStart(2, '0') + ':' +
-          String(seconds).padStart(2, '0');
+        countdownEl.textContent = formatCountdown(totalSeconds);
+      } else {
+        totalSeconds = 0;
+        countdownEl.textContent = formatCountdown(0);
+        clearInterval(timerInterval);
+        startLiveStream();
       }
     }, 1000);
+
+    playBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!streamStarted) {
+        return;
+      }
+      if (streamVideo.paused) {
+        streamVideo.play();
+        playBtn.textContent = '❚❚';
+      } else {
+        streamVideo.pause();
+        playBtn.textContent = '▶';
+      }
+    });
+
+    muteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      streamVideo.muted = !streamVideo.muted;
+      muteBtn.textContent = streamVideo.muted ? '🔇' : '🔊';
+    });
+
+    fullBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (screen.requestFullscreen) {
+        screen.requestFullscreen().catch(() => {});
+      }
+    });
 
     function getWeightedOnlineCount() {
       const roll = Math.random();
@@ -724,8 +817,6 @@
       { author: 'Зритель_Шумный:', color: '#dc2626', text: 'Дайте звука из цеха, хочу услышать болгарку в прямом эфире!' },
       { author: 'Координатор_Ира:', color: '#a21caf', text: 'Всем дышать ровно, дедлайн близко, но мы справимся!' },
       { author: 'Зритель_Наблюдатель:', color: '#475569', text: 'Ждём запуска — пока всё идёт максимально шизануто.' },
-
-      /* +40 СООБЩЕНИЙ ОТ СТОРОННИХ НАБЛЮДАТЕЛЕЙ */
       { author: 'Мимокрокодил_19:', color: '#4b5563', text: 'Случайно открыл вкладку, а там люди кулер делят как наследство.' },
       { author: 'Сосед_Сверху:', color: '#374151', text: 'Вы там чем занимаетесь? У меня люстра ходуном ходит!' },
       { author: 'Прохожий_С_Улицы:', color: '#64748b', text: 'Под окнами пролетел рулон плёнки и два листа А4. Всё норм?' },
@@ -819,8 +910,6 @@
       { nick: 'Недовольный батон', color: '#b45309' },
       { nick: 'Вечно занятый менеджер', color: '#2563eb' },
       { nick: 'Громкий чих', color: '#0284c7' },
-
-      /* +40 НОВЫХ ШУТЛИВЫХ НИКОВ С ПРИКОЛАМИ */
       { nick: 'Тухлый помидор', color: '#b91c1c' },
       { nick: 'Кривозубый шуруп', color: '#78350f' },
       { nick: 'Жирный комар', color: '#5c4033' },
@@ -907,11 +996,16 @@
       appendChatMessage(userIdentity.nick + ':', userIdentity.color, text);
       chatInput.value = '';
       chatBox.scrollTop = chatBox.scrollHeight;
+
+      if (text.toUpperCase() === 'СТАРТ') {
+        startLiveStream();
+      }
     });
 
-    const screen = document.getElementById('playerScreen');
     screen.addEventListener('click', () => {
-      alert('⚠️ Камера 1 временно отключена: оператор держит дверь в цех!');
+      if (!streamStarted) {
+        return;
+      }
     });
 
     const lightbox = document.getElementById('lightbox');
