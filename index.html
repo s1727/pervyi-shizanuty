@@ -526,21 +526,6 @@
       font-size: 12px;
       margin-top: 60px;
     }
-
-    .domain-hint {
-      display: inline-block;
-      margin-top: 10px;
-      background: rgba(255,255,255,0.06);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-family: monospace;
-      color: #eee;
-    }
-
-    .domain-hint span {
-      color: #ff5252;
-      font-weight: bold;
-    }
   </style>
 </head>
 <body>
@@ -586,7 +571,7 @@
     <div class="content-box">
       <div class="box-title">
         <span>ЧАТ ОЖИДАНИЯ</span>
-        <span style="font-size:11px; color:var(--red);">• В СЕТИ: 412</span>
+        <span style="font-size:11px; color:var(--red);" id="onlineCount">• В СЕТИ: 12</span>
       </div>
       <div class="chat-messages" id="chatBox"></div>
       <form class="chat-form" id="chatForm">
@@ -653,7 +638,7 @@
 
   <footer>
     <p>© 2026 РЕАЛИТИ-ПРОЕКТ «ПЕРВЫЙ ШИЗАНУТЫЙ». ВСЕ ПРАВА ЗАЩИЩЕНЫ. НИ ОДИН КУЛЕР НЕ ПОСТРАДАЛ (ПОЧТИ).</p>
-   </footer>
+  </footer>
 
   <script>
     let totalSeconds = 41 * 3600 + 3 * 60 + 15;
@@ -674,6 +659,20 @@
           String(seconds).padStart(2, '0');
       }
     }, 1000);
+
+    /* СЛУЧАЙНОЕ ЧИСЛО ЗРИТЕЛЕЙ (1..57, чаще 1..27) */
+    function getWeightedOnlineCount() {
+      const roll = Math.random();
+      if (roll < 0.75) {
+        return Math.floor(Math.random() * 27) + 1; // 1..27 (75% шанс)
+      }
+      return Math.floor(Math.random() * 30) + 28; // 28..57 (25% шанс)
+    }
+
+    const onlineCountEl = document.getElementById('onlineCount');
+    if (onlineCountEl) {
+      onlineCountEl.textContent = `• В СЕТИ: ${getWeightedOnlineCount()}`;
+    }
 
     const presetMessages = [
       { author: 'Саня (Дизайнер):', color: '#2563eb', text: 'Где мой макет вывески?! Кто опять сдвинул направляющие на 3 мм?!' },
