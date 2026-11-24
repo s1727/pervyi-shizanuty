@@ -81,6 +81,7 @@
       border-radius: 4px;
       text-transform: uppercase;
       white-space: nowrap;
+      cursor: pointer;
     }
 
     @media (max-width: 600px) {
@@ -197,6 +198,35 @@
       letter-spacing: 2px;
       color: #ffffff;
       text-shadow: 0 2px 12px rgba(0,0,0,0.85);
+    }
+
+    /* НЕНАВЯЗЧИВАЯ АВТОИСЧЕЗАЮЩАЯ ПОДСКАЗКА */
+    .soft-toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%) translateY(10px);
+      z-index: 1500;
+      max-width: min(92vw, 560px);
+      background: rgba(18, 19, 22, 0.92);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-left: 4px solid var(--red);
+      border-radius: 10px;
+      padding: 11px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+      text-align: center;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .soft-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
 
     .player-controls {
@@ -537,6 +567,89 @@
       gap: 8px;
     }
 
+    /* МОДАЛЬНОЕ ОКНО 18+ */
+    .age-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 11, 14, 0.85);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1200;
+    }
+
+    .age-modal-backdrop.active {
+      display: flex;
+    }
+
+    .age-modal-box {
+      background: #181a1f;
+      color: #fff;
+      border: 2px solid var(--red);
+      border-radius: 12px;
+      max-width: 400px;
+      width: 100%;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    }
+
+    .age-modal-title {
+      font-size: 18px;
+      font-weight: 900;
+      margin-bottom: 18px;
+    }
+
+    .age-modal-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .age-btn {
+      border: none;
+      border-radius: 6px;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 800;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .age-btn-yes {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .age-btn-no {
+      background: #2e323b;
+      color: #fff;
+    }
+
+    /* ЭКРАН ОТКАЗА "ВАМ ТУТ НЕ МЕСТО" */
+    .denied-flash {
+      position: fixed;
+      inset: 0;
+      background: #990000;
+      color: #ffffff;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      z-index: 2000;
+      font-size: clamp(28px, 6vw, 64px);
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .denied-flash.active {
+      display: flex;
+    }
+
     /* ПОДВАЛ */
     footer {
       background: var(--dark);
@@ -554,7 +667,7 @@
     <a href="#" class="logo-link" title="ПЕРВЫЙ ШИЗАНУТЫЙ">
       <img src="1LOGO.png" alt="ПЕРВЫЙ ШИЗАНУТЫЙ" class="logo-img">
     </a>
-    <div class="header-badge">РЕАЛИТИ 18+</div>
+    <div class="header-badge" id="ageBadge">РЕАЛИТИ 18+</div>
   </header>
 
   <section class="hero-broadcast">
@@ -580,7 +693,7 @@
           </div>
           <div class="controls-right">
             <button class="control-btn" id="muteBtn" title="Звук вкл/выкл">🔇</button>
-            <button class="control-btn" title="Настройки">⚙</button>
+            <button class="control-btn" id="gearBtn" title="Настройки">⚙</button>
             <button class="control-btn" id="fullBtn" title="На весь экран">⛶</button>
           </div>
         </div>
@@ -636,7 +749,7 @@
 
       <div class="notify-section">
         <h3>НЕ ПРОПУСТИ СТАРТ ТРАНСЛЯЦИИ</h3>
-        <p style="font-size: 13px; color: #555;">Оставь почту — пришлём ссылку за 5 минут до того, как в офисе разнесут второй кулер.</p>
+        <p style="font-size: 13px; color: #555;">Оставь почту — пришлём ссылку за 5 минут до того, как<br>в офисе разнесут второй кулер.</p>
         <form class="notify-form" onsubmit="event.preventDefault(); alert('Отлично! Вы добавлены в закрытый список зрителей.'); this.reset();">
           <input type="email" class="chat-input" title="Например: rzaka@obossaka.com" autocomplete="new-password" required>
           <button type="submit" class="chat-submit">НАПОМНИТЬ</button>
@@ -646,6 +759,8 @@
     </div>
 
   </main>
+
+  <div class="soft-toast" id="softToast" aria-live="polite"></div>
 
   <div class="lightbox-backdrop" id="lightbox" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="lightbox-panel">
@@ -658,14 +773,25 @@
     </div>
   </div>
 
+  <div class="age-modal-backdrop" id="ageModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="age-modal-box">
+      <div class="age-modal-title">Вам уже исполнилось 18 лет</div>
+      <div class="age-modal-buttons">
+        <button type="button" class="age-btn age-btn-yes" id="ageYesBtn">Да</button>
+        <button type="button" class="age-btn age-btn-no" id="ageNoBtn">Нет</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="denied-flash" id="deniedFlash">ВАМ ТУТ НЕ МЕСТО</div>
+
   <footer>
     <p>© 2026 РЕАЛИТИ-ПРОЕКТ «ПЕРВЫЙ ШИЗАНУТЫЙ». ВСЕ ПРАВА ЗАЩИЩЕНЫ. НИ ОДИН КУЛЕР НЕ ПОСТРАДАЛ (ПОЧТИ).</p>
   </footer>
 
   <script>
-    /* ТАЙМЕР: ПРИ КАЖДОМ ОБНОВЛЕНИИ СЛУЧАЙНО ОТ 36 МИНУТ (2160 С) ДО 01:17:43 (4663 С) */
-    const minSeconds = 36 * 60;              // 00:36:00
-    const maxSeconds = 1 * 3600 + 17 * 60 + 43; // 01:17:43
+    const minSeconds = 36 * 60;
+    const maxSeconds = 1 * 3600 + 17 * 60 + 43;
     const durationSeconds = Math.floor(Math.random() * (maxSeconds - minSeconds + 1)) + minSeconds;
     const sessionStartMs = Date.now();
 
@@ -675,9 +801,21 @@
     const signalLabel = document.getElementById('signalLabel');
     const playBtn = document.getElementById('playBtn');
     const muteBtn = document.getElementById('muteBtn');
+    const gearBtn = document.getElementById('gearBtn');
     const fullBtn = document.getElementById('fullBtn');
+    const softToast = document.getElementById('softToast');
 
     let streamStarted = false;
+    let softToastTimer = null;
+
+    function showSoftToast(message) {
+      softToast.textContent = message;
+      softToast.classList.add('show');
+      clearTimeout(softToastTimer);
+      softToastTimer = setTimeout(() => {
+        softToast.classList.remove('show');
+      }, 2800);
+    }
 
     function formatCountdown(sec) {
       const safeSec = Math.max(0, Math.floor(sec));
@@ -715,6 +853,7 @@
     function startLiveStream() {
       if (streamStarted) return;
       streamStarted = true;
+      softToast.classList.remove('show');
       countdownEl.textContent = formatCountdown(0);
 
       streamVideo.src = getKhabarovskVideoSrc();
@@ -746,6 +885,7 @@
     playBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!streamStarted) {
+        showSoftToast('Ожидайте начала трансляции. Либо введите стартовое сообщение в чате');
         return;
       }
       if (streamVideo.paused) {
@@ -755,6 +895,11 @@
         streamVideo.pause();
         playBtn.textContent = '▶';
       }
+    });
+
+    gearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showSoftToast('Себе в дырке покрути');
     });
 
     muteBtn.addEventListener('click', (e) => {
@@ -768,6 +913,131 @@
       if (screen.requestFullscreen) {
         screen.requestFullscreen().catch(() => {});
       }
+    });
+
+    const screenJokes = [
+      'Судя по ракурсу, в этом офисе кто-то снова забыл застегнуть ширинку перед камерой.',
+      'В кадре пока тишина, но за углом явно кто-то жёстко трогает чужой кабель.',
+      'Если присмотреться к теням, в соседней комнате опять устраивают тайный служебный роман.',
+      'Кулер стоит ровно, но репутация отдела уже лежит на полу без чувств.',
+      'Здесь обычно рождаются гениальные макеты, а иногда — неприличные истории на перекуре.',
+      'Камера направлена на хаос, но самое грязное бельё, как всегда, в бухгалтерии.',
+      'Кто-то опять оставил рулон плёнки там, где ему явно не место по технике безопасности.',
+      'Если этот кадр зависнет ещё на минуту, зрители решат, что директор уснул лицом в макет.',
+      'В эфире пока ремонт и нервы, но по звуку за дверью уже пошла жара пожёстче.',
+      'Похоже, прошлый дедлайн закончился так, что до сих пор отмывают стены и нервные клетки.',
+      'Оператор ушёл на минуту, а в кадре уже хочется проверить, не пропал ли чей-то кошелёк.',
+      'Странные пятна на фоне — это просто креатив или кто-то опять пролил кофе мимо кружки?',
+      'Если нажать ещё раз, в кадре может появиться человек с очень невинным лицом и пачкой счётов.',
+      'Закулисье рекламного агентства: снаружи глянец, внутри — лёгкая шизофрения и скотч.',
+      'Тут даже воздух пахнет свежим макетом, палёным проводом и чужими оправданиями.',
+      'Кто-то явно надеялся, что камера не захватит этот угол, но увы.',
+      'Типичный вид перед тем, как в офисе внезапно вспомнят про горящий заказ.',
+      'На экране пусто, зато фантазия у зрителей уже работает на полную мощность.',
+      'Если прислушаться, слышно, как кто-то тихо матерится над кривым прямоугольником.',
+      'В этом углу обычно прячут то, о чём стыдно сказать клиенту вслух.'
+    ];
+
+    const playerZones = [
+      { id: 1, xMin: 28, xMax: 50, yMin: 18, yMax: 50 },
+      { id: 2, xMin: 50, xMax: 72, yMin: 18, yMax: 50 },
+      { id: 3, xMin: 28, xMax: 50, yMin: 50, yMax: 82 },
+      { id: 4, xMin: 50, xMax: 72, yMin: 50, yMax: 82 },
+      { id: 5, xMin: 0,  xMax: 28, yMin: 0,  yMax: 50 },
+      { id: 6, xMin: 0,  xMax: 28, yMin: 50, yMax: 100 },
+      { id: 7, xMin: 72, xMax: 100, yMin: 0, yMax: 50 },
+      { id: 8, xMin: 72, xMax: 100, yMin: 50, yMax: 100 }
+    ];
+
+    function assignRandomZoneJokes() {
+      const pool = [...screenJokes];
+      const map = new Map();
+      for (const zone of playerZones) {
+        const idx = Math.floor(Math.random() * pool.length);
+        map.set(zone.id, pool.splice(idx, 1)[0]);
+      }
+      return map;
+    }
+
+    const zoneJokeMap = assignRandomZoneJokes();
+
+    function detectZoneByCoords(xPercent, yPercent) {
+      for (const zone of playerZones) {
+        if (
+          xPercent >= zone.xMin &&
+          xPercent <= zone.xMax &&
+          yPercent >= zone.yMin &&
+          yPercent <= zone.yMax
+        ) {
+          return zone.id;
+        }
+      }
+      return 1;
+    }
+
+    screen.addEventListener('click', (e) => {
+      if (streamStarted) return;
+      const rect = screen.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+      const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+      const zoneId = detectZoneByCoords(xPercent, yPercent);
+      const jokeText = zoneJokeMap.get(zoneId) || screenJokes[0];
+
+      showSoftToast(jokeText);
+    });
+
+    const ageBadge = document.getElementById('ageBadge');
+    const ageModal = document.getElementById('ageModal');
+    const ageYesBtn = document.getElementById('ageYesBtn');
+    const ageNoBtn = document.getElementById('ageNoBtn');
+    const deniedFlash = document.getElementById('deniedFlash');
+
+    function playAnnoyingErrorSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(190, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(115, ctx.currentTime + 0.18);
+        osc.frequency.linearRampToValueAtTime(220, ctx.currentTime + 0.36);
+
+        gain.gain.setValueAtTime(0.22, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.45);
+      } catch (_) {}
+    }
+
+    ageBadge.addEventListener('click', () => {
+      ageModal.classList.add('active');
+      ageModal.setAttribute('aria-hidden', 'false');
+    });
+
+    ageYesBtn.addEventListener('click', () => {
+      ageModal.classList.remove('active');
+      ageModal.setAttribute('aria-hidden', 'true');
+    });
+
+    ageNoBtn.addEventListener('click', () => {
+      ageModal.classList.remove('active');
+      ageModal.setAttribute('aria-hidden', 'true');
+      deniedFlash.classList.add('active');
+      playAnnoyingErrorSound();
+
+      setTimeout(() => {
+        window.close();
+        setTimeout(() => {
+          window.location.replace('about:blank');
+        }, 120);
+      }, 450);
     });
 
     function getWeightedOnlineCount() {
@@ -1016,12 +1286,6 @@
 
       if (text.toUpperCase() === 'СТАРТ') {
         startLiveStream();
-      }
-    });
-
-    screen.addEventListener('click', () => {
-      if (!streamStarted) {
-        return;
       }
     });
 
