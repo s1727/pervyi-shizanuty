@@ -638,7 +638,7 @@
         <h3>НЕ ПРОПУСТИ СТАРТ ТРАНСЛЯЦИИ</h3>
         <p style="font-size: 13px; color: #555;">Оставь почту — пришлём ссылку за 5 минут до того, как в офисе разнесут второй кулер.</p>
         <form class="notify-form" onsubmit="event.preventDefault(); alert('Отлично! Вы добавлены в закрытый список зрителей.'); this.reset();">
-          <input type="email" class="chat-input" placeholder="Твой e-mail" required>
+          <input type="email" class="chat-input" title="Например: rzaka@obossaka.com" autocomplete="new-password" required>
           <button type="submit" class="chat-submit">НАПОМНИТЬ</button>
         </form>
       </div>
@@ -690,7 +690,6 @@
 
     countdownEl.textContent = formatCountdown(totalSeconds);
 
-    /* Зима в Хабаровске (UTC+10): день с 07:30 до 18:29, ночь с 18:30 до 07:29 */
     function getKhabarovskVideoSrc() {
       const nowKhb = new Date(Date.now() + 10 * 3600 * 1000);
       const minutesFromMidnight = nowKhb.getUTCHours() * 60 + nowKhb.getUTCMinutes();
