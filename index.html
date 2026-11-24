@@ -663,7 +663,6 @@
   </footer>
 
   <script>
-    /* ТАЙМЕР СТАРТУЕТ С 01:17:43 */
     let totalSeconds = 1 * 3600 + 17 * 60 + 43;
     const countdownEl = document.getElementById('countdown');
     const screen = document.getElementById('playerScreen');
@@ -691,9 +690,16 @@
 
     countdownEl.textContent = formatCountdown(totalSeconds);
 
+    /* Зима в Хабаровске (UTC+10): день с 07:30 до 18:29, ночь с 18:30 до 07:29 */
     function getKhabarovskVideoSrc() {
-      const khabarovskHour = new Date(Date.now() + 10 * 3600 * 1000).getUTCHours();
-      return (khabarovskHour >= 7 && khabarovskHour < 21) ? 'stream-day.mp4' : 'stream-night.mp4';
+      const nowKhb = new Date(Date.now() + 10 * 3600 * 1000);
+      const minutesFromMidnight = nowKhb.getUTCHours() * 60 + nowKhb.getUTCMinutes();
+      const dayStart = 7 * 60 + 30;
+      const nightStart = 18 * 60 + 30;
+
+      return (minutesFromMidnight >= dayStart && minutesFromMidnight < nightStart)
+        ? 'stream-day.mp4'
+        : 'stream-night.mp4';
     }
 
     function startLiveStream() {
