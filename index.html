@@ -628,6 +628,40 @@
       color: #fff;
     }
 
+    /* ЭФФЕКТ "ЛАДНО, ВЕРЮ" ПРИ НАЖАТИИ "ДА" */
+    .believe-fly {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      z-index: 1900;
+      font-weight: 900;
+      font-size: clamp(24px, 4.5vw, 48px);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #ffffff;
+      text-shadow: 0 6px 24px rgba(0, 0, 0, 0.75);
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.8);
+      display: none;
+    }
+
+    .believe-fly.animate {
+      display: block;
+      animation: believeApproachFade 2s ease-out forwards;
+    }
+
+    @keyframes believeApproachFade {
+      0% {
+        opacity: 0.12;
+        transform: translate(-50%, -50%) scale(0.85);
+      }
+      100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(2.35);
+      }
+    }
+
     /* ЭКРАН ОТКАЗА "ВАМ ТУТ НЕ МЕСТО" */
     .denied-flash {
       position: fixed;
@@ -678,7 +712,7 @@
         <video class="stream-video" id="streamVideo" loop playsinline muted preload="metadata"></video>
         <div class="timer-overlay">
           <div class="status">ТРАНСЛЯЦИЯ ЕЩЕ НЕ НАЧАЛАСЬ</div>
-          <div class="digits" id="countdown">00:01:17:43</div>
+          <div class="digits" id="countdown">00:00:24:23</div>
         </div>
       </div>
 
@@ -775,7 +809,7 @@
 
   <div class="age-modal-backdrop" id="ageModal" role="dialog" aria-modal="true" aria-hidden="true">
     <div class="age-modal-box">
-      <div class="age-modal-title">Вам уже исполнилось 18 лет</div>
+      <div class="age-modal-title">Вам уже исполнилось 18 лет?</div>
       <div class="age-modal-buttons">
         <button type="button" class="age-btn age-btn-yes" id="ageYesBtn">Да</button>
         <button type="button" class="age-btn age-btn-no" id="ageNoBtn">Нет</button>
@@ -783,6 +817,7 @@
     </div>
   </div>
 
+  <div class="believe-fly" id="believeFly">ЛАДНО, ВЕРЮ</div>
   <div class="denied-flash" id="deniedFlash">ВАМ ТУТ НЕ МЕСТО</div>
 
   <footer>
@@ -790,9 +825,16 @@
   </footer>
 
   <script>
-    const minSeconds = 36 * 60;
-    const maxSeconds = 1 * 3600 + 17 * 60 + 43;
-    const durationSeconds = Math.floor(Math.random() * (maxSeconds - minSeconds + 1)) + minSeconds;
+    /* ТАЙМЕР: БАЗА 24 МИН 23 СЕК (1463 С) + ТЕКУЩИЕ МИНУТЫ И СЕКУНДЫ ВНУТРИ 30-МИНУТНОГО КУСКА СУТОК */
+    const baseSeconds = 24 * 60 + 23;
+    function calcHalfHourOffsetSeconds() {
+      const now = new Date();
+      const minutesInHalfHour = now.getMinutes() % 30;
+      const secondsInMinute = now.getSeconds();
+      return minutesInHalfHour * 60 + secondsInMinute;
+    }
+
+    const durationSeconds = baseSeconds + calcHalfHourOffsetSeconds();
     const sessionStartMs = Date.now();
 
     const countdownEl = document.getElementById('countdown');
@@ -915,6 +957,8 @@
       }
     });
 
+    const TRIGGER_MOUSE_JOKE = 'Быстро кликни в этом месте 15 раз';
+
     const screenJokes = [
       'Судя по ракурсу, в этом офисе кто-то снова забыл застегнуть ширинку перед камерой.',
       'В кадре пока тишина, но за углом явно кто-то жёстко трогает чужой кабель.',
@@ -935,7 +979,17 @@
       'Типичный вид перед тем, как в офисе внезапно вспомнят про горящий заказ.',
       'На экране пусто, зато фантазия у зрителей уже работает на полную мощность.',
       'Если прислушаться, слышно, как кто-то тихо матерится над кривым прямоугольником.',
-      'В этом углу обычно прячут то, о чём стыдно сказать клиенту вслух.'
+      'В этом углу обычно прячут то, о чём стыдно сказать клиенту вслух.',
+      TRIGGER_MOUSE_JOKE,
+      'Если у этого офиса и есть совесть, то она сейчас явно прячется под столом у завхоза.',
+      'Похоже, кто-то решил поправить макет ударом кулака — метод проверенный, но спорный.',
+      'На камере ремонт, но по ощущениям в цеху уже открыли портал в параллельную реальность.',
+      'Кто-то снова перепутал лево и право на макете и теперь делает вид, что так и задумано.',
+      'Если долго смотреть в этот угол, можно увидеть, как тает терпение главного дизайнера.',
+      'Вроде тихо, а ощущение такое, что через секунду в кадр влетит летающий степлер.',
+      'Офисный дзен: когда заказчик просит «чуть поярче», а ты уже на грани срыва.',
+      'Странно, что провод ещё не начал шевелиться сам по себе от такого напряжения.',
+      'Кто-то явно оставил здесь следы бурной ночной работы — или бурной ночной вечеринки.'
     ];
 
     const playerZones = [
@@ -960,6 +1014,7 @@
     }
 
     const zoneJokeMap = assignRandomZoneJokes();
+    const zoneClickTimestamps = new Map();
 
     function detectZoneByCoords(xPercent, yPercent) {
       for (const zone of playerZones) {
@@ -985,6 +1040,20 @@
       const zoneId = detectZoneByCoords(xPercent, yPercent);
       const jokeText = zoneJokeMap.get(zoneId) || screenJokes[0];
 
+      if (jokeText === TRIGGER_MOUSE_JOKE) {
+        const nowMs = Date.now();
+        const prevList = zoneClickTimestamps.get(zoneId) || [];
+        const recentClicks = prevList.filter((ts) => nowMs - ts <= 4000);
+        recentClicks.push(nowMs);
+        zoneClickTimestamps.set(zoneId, recentClicks);
+
+        if (recentClicks.length >= 15) {
+          zoneClickTimestamps.set(zoneId, []);
+          showSoftToast('Проверь не встал ли у мышки хвостик');
+          return;
+        }
+      }
+
       showSoftToast(jokeText);
     });
 
@@ -992,7 +1061,9 @@
     const ageModal = document.getElementById('ageModal');
     const ageYesBtn = document.getElementById('ageYesBtn');
     const ageNoBtn = document.getElementById('ageNoBtn');
+    const believeFly = document.getElementById('believeFly');
     const deniedFlash = document.getElementById('deniedFlash');
+    let believeTimer = null;
 
     function playAnnoyingErrorSound() {
       try {
@@ -1024,6 +1095,15 @@
     ageYesBtn.addEventListener('click', () => {
       ageModal.classList.remove('active');
       ageModal.setAttribute('aria-hidden', 'true');
+
+      believeFly.classList.remove('animate');
+      void believeFly.offsetWidth;
+      believeFly.classList.add('animate');
+
+      clearTimeout(believeTimer);
+      believeTimer = setTimeout(() => {
+        believeFly.classList.remove('animate');
+      }, 2000);
     });
 
     ageNoBtn.addEventListener('click', () => {
