@@ -54,7 +54,7 @@
 
     .logo-link {
       position: absolute;
-      top: 1px; /* Сдвиг логотипа на 1px вниз */
+      top: 1px;
       left: var(--logo-left);
       width: var(--logo-w);
       height: var(--logo-h);
@@ -145,13 +145,13 @@
     }
 
     .timer-overlay {
-      background: rgba(20, 22, 28, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(20, 22, 28, 0.35);
+      backdrop-filter: blur(3px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 10px;
       padding: 16px 36px;
       text-align: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
       transform: translateY(-10%);
       transition: transform 0.2s ease;
     }
@@ -167,7 +167,7 @@
       color: #fff;
       text-transform: uppercase;
       margin-bottom: 6px;
-      opacity: 0.9;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.75);
     }
 
     .timer-overlay .digits {
@@ -176,7 +176,7 @@
       font-weight: 700;
       letter-spacing: 2px;
       color: #ffffff;
-      text-shadow: 0 0 15px rgba(255,255,255,0.4);
+      text-shadow: 0 2px 12px rgba(0,0,0,0.85);
     }
 
     .player-controls {
