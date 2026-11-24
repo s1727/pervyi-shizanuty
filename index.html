@@ -146,7 +146,7 @@
 
     .timer-overlay {
       background: rgba(20, 22, 28, 0.35);
-      backdrop-filter: blur(3px);
+      backdrop-filter: blur(1.2px);
       border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 10px;
       padding: 16px 36px;
@@ -312,10 +312,6 @@
       border-radius: 8px;
       border-left: 3px solid #ccc;
     }
-
-    .chat-msg.welder { border-left-color: #f59e0b; }
-    .chat-msg.office { border-left-color: #3b82f6; }
-    .chat-msg.boss { border-left-color: var(--red); }
 
     .msg-author {
       font-weight: 800;
@@ -592,24 +588,7 @@
         <span>ЧАТ ОЖИДАНИЯ</span>
         <span style="font-size:11px; color:var(--red);">• В СЕТИ: 412</span>
       </div>
-      <div class="chat-messages" id="chatBox">
-        <div class="chat-msg office">
-          <span class="msg-author" style="color:#2563eb;">Саня (Дизайнер):</span>
-          Где мой макет вывески?! Кто опять сдвинул направляющие на 3 мм?!
-        </div>
-        <div class="chat-msg welder">
-          <span class="msg-author" style="color:#d97706;">Михалыч (Цех):</span>
-          Хватит орать, мы варим раму прямо у вас под столом. Удлинитель верните!
-        </div>
-        <div class="chat-msg">
-          <span class="msg-author">Зритель_77:</span>
-          Кулер поднимите, вода уже до серверов дотекла! 😂
-        </div>
-        <div class="chat-msg boss">
-          <span class="msg-author" style="color:var(--red);">Бухгалтерия:</span>
-          Акты сверки подпишите сначала, потом орите!
-        </div>
-      </div>
+      <div class="chat-messages" id="chatBox"></div>
       <form class="chat-form" id="chatForm">
         <input type="text" id="chatInput" class="chat-input" placeholder="Написать в чат..." required autocomplete="off">
         <button type="submit" class="chat-submit">ОТПРАВИТЬ</button>
@@ -699,19 +678,154 @@
       }
     }, 1000);
 
+    const presetMessages = [
+      { author: 'Саня (Дизайнер):', color: '#2563eb', text: 'Где мой макет вывески?! Кто опять сдвинул направляющие на 3 мм?!' },
+      { author: 'Михалыч (Цех):', color: '#d97706', text: 'Хватит орать, мы варим раму прямо у вас под столом. Удлинитель верните!' },
+      { author: 'Зритель_77:', color: '#4b5563', text: 'Кулер поднимите, вода уже до серверов дотекла! 😂' },
+      { author: 'Бухгалтерия:', color: '#d32027', text: 'Акты сверки подпишите сначала, потом орите!' },
+      { author: 'Олег_Плоттер:', color: '#0d9488', text: 'Плёнку опять зажевало, походу сегодня вывеска будет в стиле абстракционизма.' },
+      { author: 'Катя (Менеджер):', color: '#db2777', text: 'Клиент звонит каждые 10 минут и спрашивает, когда монтаж!' },
+      { author: 'Сварщик_Коля:', color: '#b45309', text: 'Маску кто-то в цеху припрятал, варю на ощупь и по звуку.' },
+      { author: 'Админ_Серверной:', color: '#4f46e5', text: 'Если этот кулер замкнёт автомат, я ухожу в отпуск до весны.' },
+      { author: 'Марина_Макет:', color: '#9333ea', text: 'Шрифты перевёл в кривые, но в душе они всё равно живые.' },
+      { author: 'Дядя_Вова:', color: '#374151', text: 'Кто приклеил степлер к столу? Признавайтесь по-хорошему.' },
+      { author: 'Резчик_Лазер:', color: '#ea580c', text: 'Акрил дымит, вытяжка гудит как взлетающий кукурузник.' },
+      { author: 'Кристина_Офис:', color: '#be185d', text: 'Кофе в бокале закончился, нервы на пределе, а обед ещё не скоро.' },
+      { author: 'Артём_Технолог:', color: '#0284c7', text: 'По чертежу сходится, по факту в цеху опять выпилили «по месту».' },
+      { author: 'Зритель_404:', color: '#6b7280', text: 'Сигнал ещё не пошёл, а драма уже на максималках!' },
+      { author: 'Склад_Завхоз:', color: '#65a30d', text: 'Скотч кончился, саморезы рассыпались, день задался.' },
+      { author: 'Менеджер_Дима:', color: '#2563eb', text: 'Я сказал клиенту «уже пакуем», а мы даже не начинали резать!' },
+      { author: 'Сварщик_Второй:', color: '#ca8a04', text: 'Держак искрит, но мы держим оборону!' },
+      { author: 'Наташа_Творческая:', color: '#7c3aed', text: 'У кого-нибудь есть лишний метр ниток или терпения?' },
+      { author: 'Бухгалтер_Вера:', color: '#dc2626', text: 'Чеки принесите, без чека даже на воду не скинусь!' },
+      { author: 'Зритель_Хабаровск:', color: '#0891b2', text: 'Наблюдаю с кружкой чая, покажите уже второй кулер!' },
+      { author: 'Препресс_Мастер:', color: '#1d4ed8', text: 'CMYK уехал, пантон уехал, зато настроение боевое.' },
+      { author: 'Монтажник_Серёга:', color: '#c2410c', text: 'Лестница шатается, перфоратор поёт, всё по плану.' },
+      { author: 'Офис_Кот:', color: '#4b5563', text: 'Мяу. (Перевод: я просто сижу на бумагах и смотрю.)' },
+      { author: 'Зритель_999:', color: '#374151', text: 'Когда там уже запуск трансляции, счётчик тикает!' },
+      { author: 'Фрезер_Оператор:', color: '#0f766e', text: 'Фреза не та, подача не та, но стружки — море.' },
+      { author: 'Менеджер_Аня:', color: '#e11d48', text: 'Кто-нибудь видел мою ручку? Она лежала здесь секунду назад!' },
+      { author: 'Снабженец_Паша:', color: '#4338ca', text: 'Везу в одной руке крепёж, в другой — успокоительное.' },
+      { author: 'Зритель_Ночной:', color: '#52525b', text: 'Отличный фон для ночных посиделок, продолжайте!' },
+      { author: 'Вёрстка_Лёха:', color: '#2563eb', text: 'Отступ 2 пикселя поправил — вся страница уехала влево.' },
+      { author: 'Цех_Бригадир:', color: '#b45309', text: 'Хватит спорить, давайте лучше чай заварим... если найдём чайник.' },
+      { author: 'Зритель_Из_Зала:', color: '#64748b', text: 'Ставлю на то, что первым сдастся офисный кулер.' },
+      { author: 'Печатник_УФ:', color: '#7e22ce', text: 'Лампа прогрелась, баннер пошёл, главное не дышать рядом.' },
+      { author: 'Секретарь_Офиса:', color: '#db2777', text: 'Курьер уже у дверей, а мы ещё не решили, какой макет правильный.' },
+      { author: 'Зритель_Дальний:', color: '#0369a1', text: 'Связь отличная, картинка сочная, ждём эфир!' },
+      { author: 'Электрик_Валера:', color: '#d97706', text: 'Не трогайте этот провод, он тёпленький не просто так!' },
+      { author: 'Корректор_Света:', color: '#be123c', text: 'В заголовке снова опечатка — проверяйте перед отправкой!' },
+      { author: 'Зритель_Скептик:', color: '#4b5563', text: 'Похоже, в этом офисе каждый день как прямой эфир.' },
+      { author: 'Логист_Макс:', color: '#0d9488', text: 'Машина на погрузке, а половина деталей ещё сохнет.' },
+      { author: 'Архивариус_Пётр:', color: '#57534e', text: 'Папку за 2024 год нашёл, но в ней лежит чей-то бутерброд.' },
+      { author: 'Зритель_Бодрый:', color: '#15803d', text: 'Счётчик идёт, интрига растёт — не расходимся!' },
+      { author: 'Дизайнер_2:', color: '#3b82f6', text: 'Сделал 12 вариантов, первый был самый нормальный, но мы его удалили.' },
+      { author: 'Цех_Новичок:', color: '#f59e0b', text: 'А где тут запасные перчатки? И запасные нервы?' },
+      { author: 'Зритель_Вечерний:', color: '#6d28d9', text: 'Зашёл чисто на минутку глянуть, залип на полчаса.' },
+      { author: 'Финансист_Ольга:', color: '#b91c1c', text: 'По смете не сходится, по факту тем более.' },
+      { author: 'Мастер_Упаковки:', color: '#0e7490', text: 'Пупырчатая плёнка лопнула сама — я честно не трогал!' },
+      { author: 'Зритель_Офисный:', color: '#334155', text: 'Жизненно до боли, как будто камеру в соседний кабинет поставили.' },
+      { author: 'Техник_Стенда:', color: '#9a3412', text: 'Кабель удлинили, теперь можно спотыкаться ещё дальше.' },
+      { author: 'Зритель_Шумный:', color: '#dc2626', text: 'Дайте звука из цеха, хочу услышать болгарку в прямом эфире!' },
+      { author: 'Координатор_Ира:', color: '#a21caf', text: 'Всем дышать ровно, дедлайн близко, но мы справимся!' },
+      { author: 'Зритель_Наблюдатель:', color: '#475569', text: 'Ждём запуска — пока всё идёт максимально шизануто.' }
+    ];
+
+    const funnyNicks = [
+      { nick: 'Рыжая овца', color: '#d95f18' },
+      { nick: 'Вонючий боров', color: '#6e472b' },
+      { nick: 'Красный бугай', color: '#c81e2b' },
+      { nick: 'Криворукий плоттерщик', color: '#b45309' },
+      { nick: 'Косоглазый верстальщик', color: '#2563eb' },
+      { nick: 'Сутулый стажёр', color: '#4b5563' },
+      { nick: 'Сонный тюлень', color: '#0284c7' },
+      { nick: 'Дырявый карман', color: '#78350f' },
+      { nick: 'Пыльный системник', color: '#374151' },
+      { nick: 'Злой хомяк', color: '#c2410c' },
+      { nick: 'Мятый чек', color: '#9f1239' },
+      { nick: 'Шумный перфоратор', color: '#b91c1c' },
+      { nick: 'Мокрый носок', color: '#0d9488' },
+      { nick: 'Лысый тапок', color: '#6b7280' },
+      { nick: 'Толстый тролль', color: '#7e22ce' },
+      { nick: 'Грязный сварщик', color: '#5c4033' },
+      { nick: 'Растрёпанный макет', color: '#1d4ed8' },
+      { nick: 'Синий понедельник', color: '#1e40af' },
+      { nick: 'Кривой прямоугольник', color: '#be185d' },
+      { nick: 'Пустой кулер', color: '#0369a1' },
+      { nick: 'Голодный бухгалтер', color: '#b91c1c' },
+      { nick: 'Зависший курсор', color: '#4338ca' },
+      { nick: 'Очумелый скотч', color: '#ca8a04' },
+      { nick: 'Жадный заказчик', color: '#991b1b' },
+      { nick: 'Взъерошенный воробей', color: '#57534e' },
+      { nick: 'Сломанный степлер', color: '#475569' },
+      { nick: 'Кислый лимон', color: '#65a30d' },
+      { nick: 'Ржавый саморез', color: '#7c2d12' },
+      { nick: 'Болтливый попугай', color: '#0891b2' },
+      { nick: 'Дёрганый нерв', color: '#e11d48' },
+      { nick: 'Тупой карандаш', color: '#854d0e' },
+      { nick: 'Потерянный саморез', color: '#52525b' },
+      { nick: 'Колючий кактус', color: '#15803d' },
+      { nick: 'Хмурый баклажан', color: '#6b21a8' },
+      { nick: 'Скрипучий стул', color: '#713f12' },
+      { nick: 'Унылый дедлайн', color: '#334155' },
+      { nick: 'Липкий маркер', color: '#a21caf' },
+      { nick: 'Шальной курьер', color: '#ea580c' },
+      { nick: 'Сварливый дед', color: '#57534e' },
+      { nick: 'Дымящийся роутер', color: '#dc2626' },
+      { nick: 'Обгоревший тост', color: '#78350f' },
+      { nick: 'Скучный отчёт', color: '#4b5563' },
+      { nick: 'Чёрный ящик', color: '#18181b' },
+      { nick: 'Бешеная табуретка', color: '#b45309' },
+      { nick: 'Сломанный калькулятор', color: '#0f766e' },
+      { nick: 'Забытый пароль', color: '#4f46e5' },
+      { nick: 'Хромой табурет', color: '#92400e' },
+      { nick: 'Недовольный батон', color: '#b45309' },
+      { nick: 'Вечно занятый менеджер', color: '#2563eb' },
+      { nick: 'Громкий чих', color: '#0284c7' }
+    ];
+
     const chatForm = document.getElementById('chatForm');
     const chatInput = document.getElementById('chatInput');
     const chatBox = document.getElementById('chatBox');
+
+    const userIdentity = funnyNicks[Math.floor(Math.random() * funnyNicks.length)];
+
+    function appendChatMessage(author, color, text) {
+      const msgEl = document.createElement('div');
+      msgEl.className = 'chat-msg';
+      msgEl.style.borderLeftColor = color;
+
+      const authorEl = document.createElement('span');
+      authorEl.className = 'msg-author';
+      authorEl.style.color = color;
+      authorEl.textContent = author;
+
+      const textNode = document.createTextNode(' ' + text);
+
+      msgEl.appendChild(authorEl);
+      msgEl.appendChild(textNode);
+      chatBox.appendChild(msgEl);
+    }
+
+    function initRandomChat() {
+      const pool = [...presetMessages];
+      const count = 4;
+      for (let i = 0; i < count && pool.length > 0; i++) {
+        const idx = Math.floor(Math.random() * pool.length);
+        const item = pool.splice(idx, 1)[0];
+        appendChatMessage(item.author, item.color, item.text);
+      }
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    initRandomChat();
 
     chatForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = chatInput.value.trim();
       if (!text) return;
 
-      const newMsg = document.createElement('div');
-      newMsg.className = 'chat-msg';
-      newMsg.innerHTML = `<span class="msg-author" style="color:var(--red);">Вы:</span> ${text}`;
-      chatBox.appendChild(newMsg);
+      appendChatMessage(userIdentity.nick + ':', userIdentity.color, text);
       chatInput.value = '';
       chatBox.scrollTop = chatBox.scrollHeight;
     });
