@@ -663,7 +663,12 @@
   </footer>
 
   <script>
-    let totalSeconds = 1 * 3600 + 17 * 60 + 43;
+    /* ТАЙМЕР: ПРИ КАЖДОМ ОБНОВЛЕНИИ СЛУЧАЙНО ОТ 36 МИНУТ (2160 С) ДО 01:17:43 (4663 С) */
+    const minSeconds = 36 * 60;              // 00:36:00
+    const maxSeconds = 1 * 3600 + 17 * 60 + 43; // 01:17:43
+    const durationSeconds = Math.floor(Math.random() * (maxSeconds - minSeconds + 1)) + minSeconds;
+    const sessionStartMs = Date.now();
+
     const countdownEl = document.getElementById('countdown');
     const screen = document.getElementById('playerScreen');
     const streamVideo = document.getElementById('streamVideo');
@@ -675,10 +680,11 @@
     let streamStarted = false;
 
     function formatCountdown(sec) {
-      const days = Math.floor(sec / 86400);
-      const hours = Math.floor((sec % 86400) / 3600);
-      const minutes = Math.floor((sec % 3600) / 60);
-      const seconds = sec % 60;
+      const safeSec = Math.max(0, Math.floor(sec));
+      const days = Math.floor(safeSec / 86400);
+      const hours = Math.floor((safeSec % 86400) / 3600);
+      const minutes = Math.floor((safeSec % 3600) / 60);
+      const seconds = safeSec % 60;
 
       return (
         String(days).padStart(2, '0') + ':' +
@@ -688,7 +694,12 @@
       );
     }
 
-    countdownEl.textContent = formatCountdown(totalSeconds);
+    function getRemainingSeconds() {
+      const elapsedSeconds = Math.floor((Date.now() - sessionStartMs) / 1000);
+      return Math.max(0, durationSeconds - elapsedSeconds);
+    }
+
+    countdownEl.textContent = formatCountdown(getRemainingSeconds());
 
     function getKhabarovskVideoSrc() {
       const nowKhb = new Date(Date.now() + 10 * 3600 * 1000);
@@ -704,7 +715,6 @@
     function startLiveStream() {
       if (streamStarted) return;
       streamStarted = true;
-      totalSeconds = 0;
       countdownEl.textContent = formatCountdown(0);
 
       streamVideo.src = getKhabarovskVideoSrc();
@@ -715,21 +725,23 @@
       streamVideo.play().catch(() => {});
     }
 
-    const timerInterval = setInterval(() => {
-      if (streamStarted) {
-        clearInterval(timerInterval);
-        return;
-      }
-      if (totalSeconds > 1) {
-        totalSeconds--;
-        countdownEl.textContent = formatCountdown(totalSeconds);
-      } else {
-        totalSeconds = 0;
-        countdownEl.textContent = formatCountdown(0);
+    function updateTimerDisplay() {
+      if (streamStarted) return;
+      const remaining = getRemainingSeconds();
+      countdownEl.textContent = formatCountdown(remaining);
+
+      if (remaining <= 0) {
         clearInterval(timerInterval);
         startLiveStream();
       }
-    }, 1000);
+    }
+
+    const timerInterval = setInterval(updateTimerDisplay, 250);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        updateTimerDisplay();
+      }
+    });
 
     playBtn.addEventListener('click', (e) => {
       e.stopPropagation();
