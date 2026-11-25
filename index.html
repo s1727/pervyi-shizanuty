@@ -9,6 +9,24 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,600;0,800;0,900;1,800&family=Roboto+Condensed:wght@700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
   
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();
+    for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+    k=e.createElement(t),a=e.createElement(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+    (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+    ym(114657512, "init", {
+      clickmap:true,
+      trackLinks:true,
+      accurateTrackBounce:true,
+      webvisor:true
+    });
+  </script>
+  <noscript><div><img src="https://mc.yandex.ru/watch/114657512" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <!-- /Yandex.Metrika counter -->
+
   <style>
     :root {
       --red: #d32027;
@@ -643,7 +661,7 @@
       text-shadow: 0 6px 24px rgba(0, 0, 0, 0.75);
       pointer-events: none;
       opacity: 0;
-      transform: translate(-50%, -50%) scale(0.8);
+      transform: translate(-50%, -50%) scale(0.85);
       display: none;
     }
 
@@ -654,11 +672,11 @@
 
     @keyframes believeApproachFade {
       0% {
-        opacity: 0.12;
+        opacity: 1;
         transform: translate(-50%, -50%) scale(0.85);
       }
       100% {
-        opacity: 1;
+        opacity: 0;
         transform: translate(-50%, -50%) scale(2.35);
       }
     }
@@ -849,6 +867,31 @@
 
     let streamStarted = false;
     let softToastTimer = null;
+
+    /* ПОДСЧЕТ ВИЗИТОВ ДЛЯ ТУПОГО КЛИКЕРА (ГЛОБАЛЬНО ЧЕРЕЗ API + ЛОКАЛЬНО ЗА СЕГОДНЯ) */
+    let globalVisitCount = null;
+    let sessionTodayCount = 1;
+
+    (function initVisitCounter() {
+      const todayKey = new Date().toISOString().slice(0, 10);
+      const dayStoreKey = 'ps_day_hits_' + todayKey;
+      const savedDayCount = parseInt(localStorage.getItem(dayStoreKey) || '0', 10) + 1;
+      localStorage.setItem(dayStoreKey, savedDayCount);
+      sessionTodayCount = savedDayCount;
+
+      const storedTotal = parseInt(localStorage.getItem('ps_visits_fallback') || '1', 10) + 1;
+      localStorage.setItem('ps_visits_fallback', storedTotal);
+      globalVisitCount = storedTotal;
+
+      fetch('https://api.countapi.xyz/hit/pervyj-shizanutyj-reality/visits')
+        .then(r => r.json())
+        .then(data => {
+          if (data && typeof data.value === 'number') {
+            globalVisitCount = data.value;
+          }
+        })
+        .catch(() => {});
+    })();
 
     function showSoftToast(message) {
       softToast.textContent = message;
@@ -1120,6 +1163,7 @@
       }, 450);
     });
 
+    /* ОНЛАЙН В ЧАТЕ: СТАРТ ПО ВЕСАМ + ПЛАВАЮЩИЙ +/-1 В ТЕЧЕНИЕ 4.5 МИНУТ */
     function getWeightedOnlineCount() {
       const roll = Math.random();
       if (roll < 0.75) {
@@ -1128,10 +1172,38 @@
       return Math.floor(Math.random() * 30) + 28;
     }
 
+    let currentOnline = getWeightedOnlineCount();
     const onlineCountEl = document.getElementById('onlineCount');
-    if (onlineCountEl) {
-      onlineCountEl.textContent = `• В СЕТИ: ${getWeightedOnlineCount()}`;
+    function renderOnline() {
+      if (onlineCountEl) {
+        onlineCountEl.textContent = `• В СЕТИ: ${currentOnline}`;
+      }
     }
+    renderOnline();
+
+    function startLiveOnlineDrift() {
+      const maxWindowMs = 4.5 * 60 * 1000;
+      const minStepMs = 7 * 1000;
+      const maxStepMs = 23 * 1000;
+      let currentOffsetMs = 0;
+      const driftEvents = [];
+
+      while (true) {
+        const stepMs = Math.floor(Math.random() * (maxStepMs - minStepMs + 1)) + minStepMs;
+        if (currentOffsetMs + stepMs > maxWindowMs) break;
+        currentOffsetMs += stepMs;
+        const delta = Math.random() < 0.5 ? 1 : -1;
+        driftEvents.push({ delayMs: currentOffsetMs, delta: delta });
+      }
+
+      driftEvents.forEach(ev => {
+        setTimeout(() => {
+          currentOnline = Math.max(1, currentOnline + ev.delta);
+          renderOnline();
+        }, ev.delayMs);
+      });
+    }
+    startLiveOnlineDrift();
 
     const presetMessages = [
       { author: 'Саня (Дизайнер):', color: '#2563eb', text: 'Где мой макет вывески?! Кто опять сдвинул направляющие на 3 мм?!' },
@@ -1340,6 +1412,7 @@
       msgEl.appendChild(authorEl);
       msgEl.appendChild(textNode);
       chatBox.appendChild(msgEl);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
     function initRandomChat() {
@@ -1355,6 +1428,63 @@
 
     initRandomChat();
 
+    /* ЖИВАЯ ЦЕПОЧКА В ЧАТЕ НА 4.5 МИНУТЫ (270 СЕК) С ФИНАЛОМ ОТ КРИСТИНЫ */
+    function startLiveChatChain() {
+      const maxWindowMs = 4.5 * 60 * 1000;
+      const minStepMs = 7 * 1000;
+      const maxStepMs = 23 * 1000;
+      const chainStart = Date.now();
+      const shuffledPool = [...presetMessages].sort(() => Math.random() - 0.5);
+
+      const scheduledEvents = [];
+      let currentOffsetMs = 0;
+      let poolCursor = 0;
+
+      while (true) {
+        const stepMs = Math.floor(Math.random() * (maxStepMs - minStepMs + 1)) + minStepMs;
+        if (currentOffsetMs + stepMs > maxWindowMs) break;
+        currentOffsetMs += stepMs;
+        const msgItem = shuffledPool[poolCursor % shuffledPool.length];
+        poolCursor += 1;
+        scheduledEvents.push({
+          delayMs: currentOffsetMs,
+          author: msgItem.author,
+          color: msgItem.color,
+          text: msgItem.text
+        });
+      }
+
+      const finalDelayMs = Math.min(maxWindowMs, currentOffsetMs + 4000);
+      scheduledEvents.push({
+        delayMs: finalDelayMs,
+        author: 'Кристина_Золотая:',
+        color: '#d4af37',
+        text: 'Ой всё, задолбали, я отрубаю чат!'
+      });
+
+      const timers = scheduledEvents.map((ev) =>
+        setTimeout(() => {
+          appendChatMessage(ev.author, ev.color, ev.text);
+        }, ev.delayMs)
+      );
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          const elapsed = Date.now() - chainStart;
+          while (scheduledEvents.length > 0 && scheduledEvents[0].delayMs <= elapsed) {
+            const due = scheduledEvents.shift();
+            appendChatMessage(due.author, due.color, due.text);
+          }
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        timers.forEach((t) => clearTimeout(t));
+      });
+    }
+
+    startLiveChatChain();
+
     chatForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const text = chatInput.value.trim();
@@ -1364,8 +1494,19 @@
       chatInput.value = '';
       chatBox.scrollTop = chatBox.scrollHeight;
 
-      if (text.toUpperCase() === 'СТАРТ') {
+      const upper = text.toUpperCase();
+
+      if (upper === 'СТАРТ') {
         startLiveStream();
+      } else if (upper === 'ВИЗИТ') {
+        setTimeout(() => {
+          const total = globalVisitCount || Math.floor(Math.random() * 50) + 120;
+          appendChatMessage(
+            'Тупой_Кликер:',
+            '#4d6888',
+            `Всего визитов: ${total} • За сегодня с этого устройства: ${sessionTodayCount}.`
+          );
+        }, 600);
       }
     });
 
