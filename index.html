@@ -544,6 +544,7 @@
       max-height: 75vh;
       object-fit: contain;
       background: #0d0e11;
+      cursor: pointer;
     }
 
     .lightbox-caption {
@@ -852,8 +853,8 @@
       return minutesInHalfHour * 60 + secondsInMinute;
     }
 
-    const durationSeconds = baseSeconds + calcHalfHourOffsetSeconds();
-    const sessionStartMs = Date.now();
+    let activeDurationSeconds = baseSeconds + calcHalfHourOffsetSeconds();
+    let activeCycleStartMs = Date.now();
 
     const countdownEl = document.getElementById('countdown');
     const screen = document.getElementById('playerScreen');
@@ -866,6 +867,7 @@
     const softToast = document.getElementById('softToast');
 
     let streamStarted = false;
+    let startedVia = null; // 'manual' | 'timer' | null
     let softToastTimer = null;
 
     /* ПОДСЧЕТ ВИЗИТОВ ДЛЯ ТУПОГО КЛИКЕРА (ГЛОБАЛЬНО ЧЕРЕЗ API + ЛОКАЛЬНО ЗА СЕГОДНЯ) */
@@ -918,8 +920,8 @@
     }
 
     function getRemainingSeconds() {
-      const elapsedSeconds = Math.floor((Date.now() - sessionStartMs) / 1000);
-      return Math.max(0, durationSeconds - elapsedSeconds);
+      const elapsedSeconds = Math.floor((Date.now() - activeCycleStartMs) / 1000);
+      return Math.max(0, activeDurationSeconds - elapsedSeconds);
     }
 
     countdownEl.textContent = formatCountdown(getRemainingSeconds());
@@ -935,11 +937,11 @@
         : 'stream-night.mp4';
     }
 
-    function startLiveStream() {
+    function startLiveStream(source = 'timer') {
       if (streamStarted) return;
       streamStarted = true;
+      startedVia = source;
       softToast.classList.remove('show');
-      countdownEl.textContent = formatCountdown(0);
 
       streamVideo.src = getKhabarovskVideoSrc();
       screen.classList.add('live-active');
@@ -949,14 +951,43 @@
       streamVideo.play().catch(() => {});
     }
 
+    function cancelLiveStream() {
+      if (!streamStarted) return;
+      const previousSource = startedVia;
+
+      streamStarted = false;
+      startedVia = null;
+
+      streamVideo.pause();
+      streamVideo.currentTime = 0;
+      streamVideo.removeAttribute('src');
+      streamVideo.load();
+
+      screen.classList.remove('live-active');
+      signalLabel.innerHTML = '<span class="live-dot"></span>ОЖИДАНИЕ СИГНАЛА';
+      playBtn.textContent = '▶';
+      muteBtn.textContent = '🔇';
+      streamVideo.muted = true;
+
+      if (previousSource === 'manual') {
+        // Возвращаемся к реальному расчётному остатку текущего цикла (даже если < 23 минут)
+        countdownEl.textContent = formatCountdown(getRemainingSeconds());
+      } else {
+        // Старт произошёл по истечении таймера — пересчитываем по тем же правилам, что и при перезагрузке сайта
+        activeDurationSeconds = baseSeconds + calcHalfHourOffsetSeconds();
+        activeCycleStartMs = Date.now();
+        countdownEl.textContent = formatCountdown(getRemainingSeconds());
+      }
+    }
+
     function updateTimerDisplay() {
       if (streamStarted) return;
       const remaining = getRemainingSeconds();
       countdownEl.textContent = formatCountdown(remaining);
 
       if (remaining <= 0) {
-        clearInterval(timerInterval);
-        startLiveStream();
+        countdownEl.textContent = formatCountdown(0);
+        startLiveStream('timer');
       }
     }
 
@@ -1099,6 +1130,74 @@
 
       showSoftToast(jokeText);
     });
+
+    /* ОТДЕЛЬНЫЙ НАБОР ИЗ 44 ШУТОК ДЛЯ УВЕЛИЧЕННЫХ КАРТИНОК (8 ЗОН, ФИКСИРОВАННАЯ РАСКЛАДКА ДО ОБНОВЛЕНИЯ СТРАНИЦЫ) */
+    const episodeLightboxJokes = [
+      'А кто это у нас такой счастливчик, что влип в такой сочный просак?',
+      'Оооо, этот персонаж явно славится своими мокрыми и искристыми приключениями.',
+      'С виду приличный кадр, а копнёшь — сплошная сырость, искры и чужие тайны.',
+      'Если тут сейчас намокнуть или приложиться к проводу — мало точно не покажется.',
+      'Похоже, кто-то снова решил проверить законы физики на собственном достоинстве.',
+      'Замерли так, будто за спиной у них открыли портал в ночной стриптиз-цех.',
+      'Ни один регламент по технике безопасности этот кадр уже не спасёт.',
+      'Когда дедлайн поджимает, даже тапки начинают жить своей бурной жизнью.',
+      'В этом месте обычно рождаются самые грязные отмазки и самые кривые швы.',
+      'Тот неловкий момент, когда лужа выглядит подозрительно тёплой, а спросить неловко.',
+      'Судя по выражению лица, человек только что понял, что план пошёл через одно место.',
+      'Офисная романтика: немного пара, капля мата и горсть невостребованных нервов.',
+      'Если приглядеться, в углу явно затаился кто-то, кому сейчас лучше не дышать.',
+      'Вокруг кипит работа, но по ощущениям кто-то просто устроил пенно-бумажную вечеринку.',
+      'Планшет в руках держит так, будто в нём записаны все грехи отдела за пятилетку.',
+      'Когда вместо красивого макета получается стихийное бедствие местного масштаба.',
+      'Кто-то явно путал кнопку «сохранить» с кнопкой «разнести всё к чертям».',
+      'Сверху капает, снизу хлюпает, посередине — чистая импровизация без тормозов.',
+      'Этот взгляд говорит громче любых слов: «Я вообще мимо проходил».',
+      'Похоже, в этом кадре кто-то потерял не только тапок, но и остатки здравого смысла.',
+      'Искры летят красиво, но по счётчику света дома уже, наверное, завыли.',
+      'Если намокло даже то, что должно быть сухим — день официально провален.',
+      'Вроде обычный вторник в агентстве, а выглядело как съёмки боевика категории Б.',
+      'Тут даже воздух пропитан лёгким запахом палёного пластика и чужой паники.',
+      'Кто-то слишком буквально понял фразу «залейте побольше контента».',
+      'Отличный момент, чтобы сделать вид, что ты вообще не с ними.',
+      'С виду хаос, но в душе каждого героя теплится надежда на чудо и премию.',
+      'Когда замах на рубль, а по факту — лужа, обрывки и чей-то потерянный кед.',
+      'В этом эпизоде явно не хватает только саундтрека из плохого кино про слесарей.',
+      'Тот случай, когда даже животные смотрят на происходящее с лёгким осуждением.',
+      'Похоже, кто-то решил закрутить интригу потуже — прямо до срыва резьбы.',
+      'Слишком много движения для помещения, где никто толком не знает, что делать.',
+      'Если долго тыкать в этот кадр, можно услышать тихий скрип чужого терпения.',
+      'Высокое напряжение чувствуется даже через экран — особенно там, где мокро.',
+      'Офисный дзен по-хабаровски: сначала устроим потоп, потом героически выплываем.',
+      'Картинка будто говорит: «Не спрашивай, откуда здесь это взялось, просто смотри».',
+      'Идеальный кадр для тех, кто любит наблюдать чужой цирк со стороны.',
+      'Похоже, кто-то уже успел пожалеть, что вообще пришёл сегодня на смену.',
+      'Когда бумажный вихрь или водяной вал решают, кто здесь главный начальник.',
+      'В этом замесе каждый сам за себя — даже те, кто вообще не при делах.',
+      'На первый взгляд — комедия, на второй — хроника внезапного краха.',
+      'Если этот кадр заговорит, он наверняка попросит плед и валидол.',
+      'Красота момента в том, что хуже уже вроде некуда, но всегда находится куда.',
+      'Собрались как-то в одной комнате хаос, сырость и чувство юмора — и понеслось.'
+    ];
+
+    function buildSessionLightboxMaps() {
+      const mapsByImage = new Map();
+      document.querySelectorAll('.episode-card').forEach((card) => {
+        const imgKey = card.dataset.img || '';
+        if (!imgKey || mapsByImage.has(imgKey)) return;
+
+        const pool = [...episodeLightboxJokes];
+        const zoneMap = new Map();
+        for (const zone of playerZones) {
+          const idx = Math.floor(Math.random() * pool.length);
+          zoneMap.set(zone.id, pool.splice(idx, 1)[0]);
+        }
+        mapsByImage.set(imgKey, zoneMap);
+      });
+      return mapsByImage;
+    }
+
+    const sessionLightboxMaps = buildSessionLightboxMaps();
+    let activeLightboxImgKey = '';
 
     const ageBadge = document.getElementById('ageBadge');
     const ageModal = document.getElementById('ageModal');
@@ -1497,7 +1596,9 @@
       const upper = text.toUpperCase();
 
       if (upper === 'СТАРТ') {
-        startLiveStream();
+        startLiveStream('manual');
+      } else if (upper === 'НЕСТАРТ') {
+        cancelLiveStream();
       } else if (upper === 'ВИЗИТ') {
         setTimeout(() => {
           const total = globalVisitCount || Math.floor(Math.random() * 50) + 120;
@@ -1518,13 +1619,26 @@
 
     document.querySelectorAll('.episode-card').forEach((card) => {
       card.addEventListener('click', () => {
-        lightboxImg.src = card.dataset.img || '';
+        activeLightboxImgKey = card.dataset.img || '';
+        lightboxImg.src = activeLightboxImgKey;
         lightboxImg.alt = card.dataset.title || '';
         lightboxTitle.textContent = card.dataset.title || '';
         lightboxDesc.textContent = card.dataset.desc || '';
         lightbox.classList.add('active');
         lightbox.setAttribute('aria-hidden', 'false');
       });
+    });
+
+    lightboxImg.addEventListener('click', (e) => {
+      const rect = lightboxImg.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      const xPercent = ((e.clientX - rect.left) / rect.width) * 100;
+      const yPercent = ((e.clientY - rect.top) / rect.height) * 100;
+      const zoneId = detectZoneByCoords(xPercent, yPercent);
+      const imageZoneMap = sessionLightboxMaps.get(activeLightboxImgKey);
+      const joke = (imageZoneMap && imageZoneMap.get(zoneId)) || episodeLightboxJokes[0];
+      showSoftToast(joke);
     });
 
     function closeLightbox() {
